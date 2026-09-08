@@ -26,7 +26,12 @@ function walk(dir) {
       const trimmed = line.trim();
       if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) return;
       // strip trailing line comments and JSDoc before matching — we only care about real code
-      const code = line.replace(/\/\/.*$/, "").replace(/\/\*.*?\*\//g, "");
+      let code = line.replace(/\/\/.*$/, "").replace(/\/\*.*?\*\//g, "");
+      // strip regex literals and string literals — `/x/i` delimiters and quoted text
+      // are not arithmetic even though they contain `/` `*` `+`
+      code = code
+        .replace(/\/(?![*/])(?:\\.|[^/\n])+\/[gimsuy]*/g, " RE ")
+        .replace(/"(?:\\.|[^"\n])*"|'(?:\\.|[^'\n])*'|`(?:\\.|[^`\n])*`/g, " STR ");
       if (MONEY.test(code) && !DECIMAL_OK.test(code)) {
         hits.push(`${p}:${i + 1}: ${trimmed}`);
       }

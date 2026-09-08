@@ -7,11 +7,16 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "src");
+// Exactly the contractual grep from TESTING.md §6 / SECURITY.md §5.
 const PATTERN =
   /withdraw|external.?address|universalTransfer|sapi\/v1\/capital|\/wallet\/withdraw|transfer(To|From)?Master|withdrawApply/i;
 
-/** Lines that are allowed to mention the words because they are the guard itself. */
-const ALLOW = /toolCatalog|EXCLUDE|excluded|SECURITY|lint-withdraw|no withdrawal|never/i;
+/**
+ * Lines allowed to contain the word: the exclusion guard itself and its
+ * user-facing refusal message. These PREVENT a withdrawal path; they are not one.
+ */
+const ALLOW =
+  /EXCLUDE_PATTERN|transfer\/withdraw\/futures\/margin|are refused|not in SessionGuard|lint-withdraw|SECURITY|D-6/i;
 
 let hits = [];
 
