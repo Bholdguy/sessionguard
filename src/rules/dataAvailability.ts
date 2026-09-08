@@ -28,6 +28,9 @@ export const dataAvailabilityRule: RuleFn = (ctx: RuleContext): RuleResult => {
   if (!ctx.account.ok || ctx.account.stale) {
     return fail(`Account state unavailable (${ctx.account.reason ?? "not ok"}). No data, no trade.`);
   }
+  if (ctx.account.balances["USDT"] === undefined) {
+    return fail("Account state incomplete: quote asset USDT missing from balances. No data, no trade.");
+  }
 
   // every symbol we need a mark for must be fresh & ok
   const needed = new Set<string>([ctx.ticket.symbol, ...ctx.pnl.missingMarks]);
