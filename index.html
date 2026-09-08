@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SessionGuard — Session-level risk supervisor for Binance Agent OS</title>
+<style>
+  :root{
+    --bg: #0B0E11;
+    --bg-raised: #12161B;
+    --line: #23282f;
+    --text: #E8E6E1;
+    --text-dim: #9AA0A8;
+    --amber: #D9A441;
+    --red: #C0463B;
+    --green: #4E9A6E;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection{ background: var(--amber); color: #0B0E11; }
+
+  a{ color: var(--amber); text-decoration: none; }
+  a:hover{ text-decoration: underline; }
+  a:focus-visible, button:focus-visible{ outline: 2px solid var(--amber); outline-offset: 3px; }
+
+  .wrap{ max-width: 1040px; margin: 0 auto; padding: 0 28px; }
+
+  /* ---------- NAV ---------- */
+  nav{
+    position: sticky; top:0; z-index: 10;
+    background: rgba(11,14,17,0.86);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav .wrap{ display:flex; align-items:center; justify-content:space-between; height:60px; }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:600; letter-spacing:-0.01em; color:var(--text); }
+  .brand .dot{ width:9px; height:9px; border-radius:50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+  nav .links{ display:flex; gap: 24px; font-size: 14px; }
+  nav .links a{ color: var(--text-dim); }
+  nav .links a:hover{ color: var(--text); }
+
+  /* ---------- HERO ---------- */
+  header.hero{ padding: 88px 0 64px; }
+  .hero-grid{ display:grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items:center; }
+  @media (max-width: 860px){ .hero-grid{ grid-template-columns: 1fr; } }
+
+  .eyebrow{ font-family: var(--mono); font-size: 12.5px; color: var(--amber); margin: 0 0 18px; }
+  h1{
+    font-size: clamp(30px, 4.2vw, 44px);
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+    margin: 0 0 22px;
+    max-width: 15ch;
+  }
+  h1 em{ font-style: normal; color: var(--amber); }
+  .lede{ color: var(--text-dim); font-size: 17px; max-width: 46ch; margin: 0 0 30px; }
+
+  .cta-row{ display:flex; gap: 14px; flex-wrap: wrap; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding: 12px 20px; border-radius: 6px; font-size: 14.5px; font-weight: 600;
+    border: 1px solid transparent;
+  }
+  .btn-primary{ background: var(--amber); color: #0B0E11; }
+  .btn-primary:hover{ background:#e6b358; text-decoration:none; }
+  .btn-ghost{ border-color: var(--line); color: var(--text); }
+  .btn-ghost:hover{ border-color: #3a4048; text-decoration:none; }
+
+  /* terminal panel */
+  .term{
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px -20px rgba(0,0,0,0.6);
+  }
+  .term-bar{
+    display:flex; align-items:center; gap:8px;
+    padding: 10px 14px; border-bottom: 1px solid var(--line);
+    font-family: var(--mono); font-size: 12px; color: var(--text-dim);
+  }
+  .term-bar .puck{ width:9px; height:9px; border-radius:50%; background:#3a4048; }
+  .term-body{
+    font-family: var(--mono); font-size: 12.6px; line-height: 1.75;
+    padding: 18px 18px 20px; white-space: pre-wrap; color: #C9CDD3;
+  }
+  .term-body .allow{ color: var(--green); }
+  .term-body .block{ color: var(--red); font-weight: 600; }
+  .term-body .dim{ color: #5b6169; }
+  .term-body .amber{ color: var(--amber); }
+
+  /* ---------- SECTION SHELL ---------- */
+  section{ padding: 64px 0; border-top: 1px solid var(--line); }
+  .kicker{ font-family: var(--mono); font-size: 12.5px; color: var(--text-dim); margin: 0 0 10px; }
+  h2{ font-size: clamp(22px, 3vw, 30px); letter-spacing:-0.01em; margin: 0 0 18px; max-width: 26ch; }
+  .lead-p{ color: var(--text-dim); max-width: 62ch; font-size: 15.5px; }
+
+  /* ---------- PROBLEM: quote strip ---------- */
+  .quotes{ display:grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); margin-top: 32px; border: 1px solid var(--line); border-radius: 8px; overflow:hidden; }
+  @media (max-width: 720px){ .quotes{ grid-template-columns: 1fr; } }
+  .quote{ background: var(--bg-raised); padding: 24px 26px; }
+  .quote p{ margin: 0 0 12px; font-size: 15px; color: var(--text); }
+  .quote cite{ font-style: normal; font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+
+  /* ---------- RULES: log-line list ---------- */
+  .rules{ margin-top: 32px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .rule{ display:grid; grid-template-columns: 190px 1fr; gap: 24px; padding: 20px 24px; border-bottom: 1px solid var(--line); }
+  .rule:last-child{ border-bottom: none; }
+  @media (max-width: 620px){ .rule{ grid-template-columns: 1fr; gap:6px; } }
+  .rule-code{ font-family: var(--mono); font-size: 13px; color: var(--amber); align-self:start; padding-top:2px; }
+  .rule-body h3{ margin: 0 0 6px; font-size: 15.5px; }
+  .rule-body p{ margin:0; color: var(--text-dim); font-size: 14.5px; }
+
+  /* ---------- METRIC ---------- */
+  .metric-panel{
+    margin-top: 32px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 40px 36px;
+    background: linear-gradient(180deg, var(--bg-raised), var(--bg));
+  }
+  .metric-num{ font-family: var(--mono); font-size: clamp(48px, 8vw, 76px); color: var(--amber); line-height:1; letter-spacing:-0.02em; }
+  .metric-label{ color: var(--text-dim); font-size: 15px; margin-top: 12px; max-width: 56ch; }
+  .metric-source{ margin-top: 18px; font-family: var(--mono); font-size: 12px; color: #5b6169; }
+
+  .bar-compare{ margin-top: 28px; display:grid; gap: 14px; max-width: 560px; }
+  .bar-row{ display:grid; grid-template-columns: 110px 1fr 70px; align-items:center; gap: 12px; font-family: var(--mono); font-size: 12.5px; }
+  .bar-track{ height: 10px; background: #1a1f25; border-radius: 3px; overflow:hidden; }
+  .bar-fill{ height: 100%; border-radius: 3px; }
+  .bar-fill.super{ background: var(--green); }
+  .bar-fill.unsuper{ background: var(--red); }
+
+  /* ---------- ARCHITECTURE ---------- */
+  .arch{ margin-top: 32px; font-family: var(--mono); font-size: 13px; color: var(--text-dim); border:1px solid var(--line); border-radius: 8px; padding: 30px 24px; overflow-x:auto; }
+  .arch pre{ margin:0; white-space: pre; }
+  .arch .node{ color: var(--text); }
+  .arch .halt{ color: var(--red); }
+  .arch .ok{ color: var(--green); }
+
+  /* ---------- FOOTER ---------- */
+  footer{ padding: 48px 0 60px; border-top: 1px solid var(--line); }
+  footer .foot-row{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap: 16px; }
+  footer .foot-links{ display:flex; gap: 20px; font-size: 14px; }
+  footer p{ color: var(--text-dim); font-size: 13px; margin: 0; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="dot"></span> SessionGuard</div>
+    <div class="links">
+      <a href="#problem">Problem</a>
+      <a href="#rules">Rules</a>
+      <a href="#evidence">Evidence</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://github.com/Bholdguy/sessionguard">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">BINANCE AGENT OS MINI HACKATHON — TRACK A</p>
+      <h1>The ticket was legal.<br>The <em>book</em> was not.</h1>
+      <p class="lede">Every guardrail built for this hackathon checks whether one trade is too big. SessionGuard checks whether the account is still alive — tracking cumulative drawdown, trade velocity, and loss-ladder patterns across a session, not inside any single order.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/Bholdguy/sessionguard">View the code</a>
+        <a class="btn btn-ghost" href="#evidence">See the evidence</a>
+      </div>
+    </div>
+
+    <div class="term">
+      <div class="term-bar"><span class="puck"></span><span class="puck"></span><span class="puck"></span>&nbsp;&nbsp;session — sessionguard</div>
+      <div class="term-body">$ npm run agent -- --scenario drawdown
+
+trade 1  BTCUSDT  buy   <span class="allow">ALLOWED</span>
+trade 2  BTCUSDT  buy   <span class="allow">ALLOWED</span>
+trade 3  BTCUSDT  buy   <span class="allow">ALLOWED</span>
+trade 4  BTCUSDT  buy   <span class="allow">ALLOWED</span>
+<span class="dim">drawdown -7.6374%</span>
+
+trade 5  BTCUSDT  buy   <span class="block">DRAWDOWN_BREACH</span>
+<span class="amber">Session drawdown -7.6374% exceeds -5% limit.
+Trading halted.</span>
+
+<span class="dim">Binance's own confirm-before-execute step
+never even saw trade 5.</span></div>
+    </div>
+  </div>
+</header>
+
+<section id="problem">
+  <div class="wrap">
+    <p class="kicker">WHERE ACCOUNTS ACTUALLY BLOW UP</p>
+    <h2>Not one bad trade. Twenty legal ones.</h2>
+    <p class="lead-p">Every one of these is a real, cited failure. In none of them did a single order break a size, leverage, or symbol rule.</p>
+    <div class="quotes">
+      <div class="quote">
+        <p>"Position sizing was a soft preference rather than a hard gate... once the drawdown flywheel crossed the recovery horizon, every subsequent trade expanded the blast radius."</p>
+        <cite>r/ClaudeAI — $31,000 lost</cite>
+      </div>
+      <div class="quote">
+        <p>Grid / martingale strategy, no hard stop, one-way candle: "+$2k over three months, then −$8k in seven seconds."</p>
+        <cite>r/Daytrading — $8,000 gone in 7s</cite>
+      </div>
+      <div class="quote">
+        <p>"It once churned one silver position seven times in seventeen minutes for three cents profit and fourteen cents fees."</p>
+        <cite>r/AI_Agents — live MCP trading agent</cite>
+      </div>
+      <div class="quote">
+        <p>"Open risk is the number I wasn't watching. I'd been looking at realised P&amp;L."</p>
+        <cite>r/ai_trading — 249 bots, $5.29M open risk</cite>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="rules">
+  <div class="wrap">
+    <p class="kicker">HOW IT DECIDES</p>
+    <h2>Deterministic checks. No model in the loop.</h2>
+    <p class="lead-p">The agent proposes a trade. Code — never the model — computes every threshold and owns the send/block decision, in a fixed order, first failure wins.</p>
+    <div class="rules">
+      <div class="rule">
+        <div class="rule-code">DRAWDOWN_BREACH</div>
+        <div class="rule-body">
+          <h3>Session drawdown halt</h3>
+          <p>Halts once cumulative realized + unrealized P&amp;L crosses a configured loss threshold for the session — regardless of how small each individual trade was.</p>
+        </div>
+      </div>
+      <div class="rule">
+        <div class="rule-code">VELOCITY_EXCEEDED</div>
+        <div class="rule-body">
+          <h3>Trade-frequency cap</h3>
+          <p>Halts when trade count in a rolling window exceeds a limit — the check no per-order validator can perform, since it depends on the ten trades before it.</p>
+        </div>
+      </div>
+      <div class="rule">
+        <div class="rule-code">LADDER_DETECTED</div>
+        <div class="rule-body">
+          <h3>Loss-ladder detection</h3>
+          <p>Flags a same-direction position increase after a loss on that symbol — the martingale pattern behind several of the largest account blowups on record.</p>
+        </div>
+      </div>
+      <div class="rule">
+        <div class="rule-code">DATA_UNAVAILABLE</div>
+        <div class="rule-body">
+          <h3>Fail-closed on missing data</h3>
+          <p>If market price or account state can't be read, fresh and sane, the next trade is blocked. No data, no trade — never a silent fallback to stale state.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="evidence">
+  <div class="wrap">
+    <p class="kicker">MEASURED, NOT ASSERTED</p>
+    <h2>Run head-to-head against an unsupervised agent.</h2>
+    <div class="metric-panel">
+      <div class="metric-num">18.3&times;</div>
+      <p class="metric-label">deeper average drawdown for the unsupervised agent versus SessionGuard, across three scripted losing sessions (drawdown, velocity, ladder) run on identical, deterministic data.</p>
+
+      <div class="bar-compare">
+        <div class="bar-row">
+          <span>Supervised</span>
+          <div class="bar-track"><div class="bar-fill super" style="width:19%"></div></div>
+          <span>&minus;7.64%</span>
+        </div>
+        <div class="bar-row">
+          <span>Unsupervised</span>
+          <div class="bar-track"><div class="bar-fill unsuper" style="width:96%"></div></div>
+          <span>&minus;38.3%</span>
+        </div>
+      </div>
+
+      <p class="metric-source">drawdown scenario, final session drawdown. Reproducible via <code>npm run baseline</code> &mdash; generated from evidence/results.csv, not typed by hand.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">ARCHITECTURE</p>
+    <h2>Sits in front of Binance's own MCP server.</h2>
+    <p class="lead-p">SessionGuard is a transparent MCP proxy. The agent connects to it exactly as it would connect to Binance directly — every call is either forwarded unmodified or blocked before it ever reaches Binance's own confirm-before-execute step.</p>
+    <div class="arch">
+<pre><span class="node">Trading Agent</span> (Claude Code / Codex / Cursor)
+      |
+      |  MCP call: trade.placeOrder
+      v
+<span class="node">SessionGuard</span>  &mdash; session state lives here, not in the agent
+      |  kill-switch &rarr; data check &rarr; drawdown &rarr; velocity &rarr; ladder
+      |
+      +-- fail  &rarr;  <span class="halt">BLOCKED + logged, never reaches Binance</span>
+      |
+      +-- pass  &rarr;  forwarded byte-for-byte
+                        |
+                        v
+              <span class="ok">Binance Agent OS MCP server</span>
+              (confirm-before-execute, Agentic sub-account,
+               no withdrawal scope &mdash; ever)</pre>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <p class="kicker">FOR THE JUDGES</p>
+    <h2>Questions judges ask.</h2>
+    <div class="rules">
+      <div class="rule">
+        <div class="rule-code">Q1</div>
+        <div class="rule-body">
+          <h3>Does this replace TradeGuard's per-trade checks?</h3>
+          <p>No. Per-ticket size, leverage, and symbol validation is TradeGuard's layer. SessionGuard operates one level up, on the running session — cumulative drawdown, trade velocity, and loss-ladder patterns that a per-order validator structurally cannot see, because it evaluates one ticket at a time and holds no memory of the ten before it. TradeGuard's own README states it implements no velocity or drawdown circuit-breaking; SessionGuard is precisely that layer, and does not compete with per-ticket validation.</p>
+        </div>
+      </div>
+      <div class="rule">
+        <div class="rule-code">Q2</div>
+        <div class="rule-body">
+          <h3>Does it touch live funds?</h3>
+          <p>Not on the submission path. Per DECISIONS.md D-0, every scripted scenario runs against a deterministic MockUpstream, so the demo does not depend on live-market timing, token state, or Binance availability. A live Binance fill is attempted only after the entry is otherwise submittable, as an enhancement — never a blocker. There is no withdrawal scope to request in any case.</p>
+        </div>
+      </div>
+      <div class="rule">
+        <div class="rule-code">Q3</div>
+        <div class="rule-body">
+          <h3>Why block a trade instead of resizing it to fit under the limit?</h3>
+          <p>SessionGuard never proposes, sizes, or times a trade (protected property P-5) — resizing an order would mean the supervisor authoring one, which is exactly the boundary it holds. The model proposes; deterministic code decides forward or block. A halt is also meant to be read by a human: the audit log shows the exact sequence that crossed the line, and the operator tightens the config and re-arms.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">SCOPE GUARANTEES</p>
+    <h2>What SessionGuard never does.</h2>
+    <p class="lead-p">The six protected properties in the PRD, and the no-withdrawal guarantee in SECURITY.md, stated as hard boundaries.</p>
+    <div class="quotes">
+      <div class="quote">
+        <p>Never lets the model compute or report a halt. Every threshold comparison and every block code are deterministic TypeScript over config.json — no LLM output is ever the deciding number.</p>
+        <cite>PRD &sect;1.2 — P-1</cite>
+      </div>
+      <div class="quote">
+        <p>Never resizes, re-times, or authors a trade of its own. It only forwards the agent's call unmodified, or blocks it and logs why.</p>
+        <cite>PRD &sect;1.2 — P-5</cite>
+      </div>
+      <div class="quote">
+        <p>Never calls a withdrawal or external-transfer tool, and contains no code path that could. The restriction is grep-asserted in the test suite; the platform exposes no withdrawal scope to begin with.</p>
+        <cite>SECURITY.md &sect;5 — P-5</cite>
+      </div>
+      <div class="quote">
+        <p>Never substitutes cached, stale, or assumed data for a failed read, and never places session state in the agent's context where a reasoning failure could mutate or erase it.</p>
+        <cite>PRD &sect;1.2 — P-3, P-6</cite>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <p>SessionGuard — built for the Binance Agent OS Mini Hackathon, Track A.</p>
+      <div class="foot-links">
+        <a href="https://github.com/Bholdguy/sessionguard">GitHub</a>
+        <a href="https://x.com/Binance">@Binance</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
