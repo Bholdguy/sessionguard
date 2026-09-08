@@ -1,0 +1,40 @@
+{
+  "name": "sessionguard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Session-level risk supervisor: a stateful MCP proxy between an AI trading agent and Binance Agent OS.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "start": "node --loader tsx dist-loader.mjs src/index.ts",
+    "dev": "tsx src/index.ts",
+    "mock": "tsx test/mockUpstream.ts",
+    "agent": "tsx src/evidence/scenarioRunner.ts",
+    "baseline": "tsx src/evidence/baseline.ts",
+    "baseline:show": "node -e \"process.stdout.write(require('fs').readFileSync('evidence/results.csv','utf8')+'\\n'+require('fs').readFileSync('evidence/headline.txt','utf8')+'\\n')\"",
+    "audit:show": "tsx src/audit/showAudit.ts",
+    "rearm": "tsx src/admin/rearmCli.ts",
+    "demo:reset": "tsx src/admin/demoReset.ts",
+    "lint:money": "node scripts/lint-money.mjs",
+    "lint:withdraw": "node scripts/lint-withdraw.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "decimal.js": "^10.4.3",
+    "express": "^4.21.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

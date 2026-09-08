@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+*.log
+
+# Per-run evidence (regenerated; not source)
+evidence/audit-*.jsonl
+evidence/fills-*.jsonl
+evidence/mockupstream-calls.log
+
+# Keep committed: evidence/scenarios/*.json, evidence/results.csv, evidence/headline.txt
+!evidence/scenarios/
+!evidence/results.csv
+!evidence/headline.txt

@@ -1,0 +1,10 @@
+{
+  "drawdownPctLimit": "5",
+  "velocityWindowSeconds": 900,
+  "velocityMaxTrades": 5,
+  "ladderMultipleLimit": "1.5",
+  "allowedSymbols": ["BTCUSDT", "ETHUSDT", "BNBUSDT"],
+  "priceStalenessSeconds": 10,
+  "dataFetchTimeoutMs": 3000,
+  "priceSanityMaxDeviationPct": "20"
+}
