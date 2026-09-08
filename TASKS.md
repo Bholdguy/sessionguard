@@ -8,6 +8,34 @@ Sequential checklist, ordered exactly by `PRD.md` §8. No step dropped, reordere
 
 ---
 
+## PROGRESS (updated during build)
+
+| Step | Status | Notes |
+|---|---|---|
+| 0 Scaffold | ✅ done | strict TS, Vitest, decimal.js, enums, interfaces, lint scripts |
+| 1 Proxy skeleton | ✅ done | `tools/list` discovery + hard-timeout exit; byte-for-byte forward; MockUpstream |
+| 2 Auth | ✅ scaffold done / `[P]` live | bearer attach, 401→AuthError, single-shot refresh; live OAuth post-submit |
+| 3 Fill capture | ✅ done | average-cost ledger; fill parser (array/multi/thin); BNB-fee fails closed |
+| 4 Running P&L | ✅ done | realized+unrealized, exact-decimal DoD test; marketReader fail-closed + sanity clamp |
+| 5 Drawdown | ✅ done | fixed-order `evaluate`; `sessionStore`; DD-1..3/6, EV-1/5/6/7/9 |
+| 6 Velocity | ✅ done | inclusive window; VL-1..4; INV-7 |
+| 7 Ladder | ✅ done | same-direction size-up after realised loss; LD-1..7 |
+| 7a Fail-closed | ✅ done | DA-2..9; quote-asset check; 401/stale/error → DATA_UNAVAILABLE |
+| 8 Config | ✅ done | zod schema, versioned, SG_* overrides, invalid→exit(1) |
+| 9 Audit log | ✅ done | append-only JSONL, one row/decision, reconstruction, bearer redaction, logId gaps |
+| 10 Manual reset | ✅ done | `/admin/rearm` token-gated; new session id, fresh baseline, cleared ledger (D-8) |
+| 11 Dashboard | ✅ done | terminal renderer + `GET /state` (strings, no number leak). Web view skipped per D-10 T4 unless time allows |
+| 12 Reference agent | ✅ scripted (1b) done / `[P]` Claude Code | `scenarioRunner` drives placeOrder sequences through the proxy |
+| 13 Scenarios | ✅ done | happy/drawdown/velocity/ladder/data-loss; IT-1..9; determinism |
+| 13a Baseline | ✅ done | supervised vs unsupervised → `results.csv` + generated `headline.txt`; BL-1..5 |
+| 14 Video + README | ⏳ README done; **recording pending** |
+| 15 Submit | ⏳ pending — follow/repost, quote-repost, survey; operator jurisdiction check |
+
+**Test count:** 80 passing. **Lint:** `lint:money` + `lint:withdraw` green.
+**Triage tiers (D-10):** not triggered — Step 7 (ladder) built; full unit matrices kept; audit rows full; dashboard terminal-only (web view skipped, T4). Step 13a intact.
+
+---
+
 ## Step 0 — Repo + toolchain bootstrap  `[R]`
 
 - [ ] Init repo: `npm init`, TypeScript strict, Vitest, `decimal.js`, an MCP server/client lib (Streamable HTTP), zod. `.gitignore` includes `.env`, `evidence/audit-*.jsonl`, `evidence/fills-*.jsonl`.
