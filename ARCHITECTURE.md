@@ -56,7 +56,7 @@ Directory map is PRD §6. Responsibilities and allowed dependencies:
 | `audit/receipt` | Structured receipt returned to System 1 on every decision. | `domain/*` | — |
 | `config/schema`, `config/load` | zod schema; boot validation (exit non-zero on invalid); `configVersion`. | `domain/*` | — |
 | `admin/resetEndpoint`, `admin/configEndpoint` | Localhost + `SESSIONGUARD_ADMIN_TOKEN`; re-arm (D-8) and live config swap; write `RESET` / `CONFIG_CHANGE` audit rows. | `state/sessionStore`, `config/*`, `audit/*` | `rules/*` |
-| `view/dashboard` | Poll `GET /state`; terminal + barebones web view. Read-only. | `state/*` (read), HTTP | `rules/*`, `mcp/*` |
+| `view/stateView` | Build the `StateSnapshot` for `GET /state` (`liveSnapshot()`); render the read-only terminal dashboard string (`renderDashboard()`). **Terminal only — no web view (D-10 T4).** See §9. | `state/*` (read), `market/marketReader` | `rules/*`, `mcp/*` |
 | `evidence/scenarioRunner`, `evidence/baseline` | Scripted scenarios; supervised vs unsupervised runs → `evidence/results.csv` → generated headline sentence. | `mcp/*`, `test/mockUpstream` | — |
 | `test/mockUpstream` | MCP server implementing the resolved tool surface with scripted fills/prices/errors (D-0, D-7). | `domain/*` | production `src/*` |
 
@@ -81,7 +81,7 @@ Directory map is PRD §6. Responsibilities and allowed dependencies:
 6. audit/auditLog.write(SESSION_START)  incl. resolved ToolCatalog + raw tools/list payload (D-1)
 7. admin endpoints bind to 127.0.0.1:SESSIONGUARD_ADMIN_PORT (require SESSIONGUARD_ADMIN_TOKEN)
 8. mcp/inboundServer listen on 127.0.0.1:SESSIONGUARD_INBOUND_PORT (no auth, D-4)
-9. view/dashboard begins polling GET /state
+9. index.ts starts the 1s terminal dashboard (view/stateView); GET /state served on the admin port (D-10 T4: no web view) — see §9
 ```
 
 No step retries indefinitely. Every failure path is: one clear message, non-zero exit (D-1).
@@ -252,3 +252,28 @@ Single-process, single-session by design (PRD §4.1 "one Agentic sub-account per
 | agent calls a whitelisted tool with symbol outside whitelist | `rules/evaluate` | refuse, log; no halt | `SYMBOL_NOT_WHITELISTED` (RefusalCode) |
 | call arrives with no armed session | `inboundServer` | refuse, log | `SESSION_NOT_ARMED` (RefusalCode) |
 | session already `HALTED` | `rules/evaluate` rule 0 | block, no reads, no forward | stored `haltReason` |
+
+---
+
+## 9. Frontend / observability layer
+
+SessionGuard's frontend is deliberately thin, local, and **read-only**. It exists only to make session state legible to the operator and to a judge watching the demo. There is no hosted web app, no framework, and no build step for the UI — the "frontend" is a terminal renderer plus a JSON endpoint.
+
+Both surfaces bind to `127.0.0.1` on the **admin** port (`SESSIONGUARD_ADMIN_PORT`, default `8789`) — a *separate* port from the inbound MCP surface (`SESSIONGUARD_INBOUND_PORT`, default `8788`) that System 1 connects to. Neither is on the MCP path, so a reasoning failure in System 1 cannot reach them.
+
+| Surface | Module | What it is |
+|---|---|---|
+| **Terminal dashboard** | `view/stateView.ts` → `renderDashboard()`, driven by a 1 s `setInterval` in `index.ts` | A plain-text box repainted in place on the proxy's stdout each second: kill-switch state (`● ACTIVE` / `■ HALTED` + `haltReason`), running P&L (realized / unrealized / total), `drawdownPct` vs the configured limit, trades-in-window vs the velocity limit, per-symbol net exposure + `last=loss` flag, and `configVersion`. |
+| **`GET /state`** | served by `admin/adminServer.ts`; snapshot built by `view/stateView.ts` → `liveSnapshot()` | An unauthenticated, read-only JSON endpoint returning the full `StateSnapshot` (PRD §9.7) with **every decimal serialized as a string** — no `number` on any money / price / quantity field. Read on demand (`curl 127.0.0.1:8789/state`) or polled by the terminal renderer. It has no write path; state changes only through the token-gated `POST /admin/rearm` and `POST /admin/config` on the same port. |
+
+Both read `sessionStore` + `ledger` + a fresh `marketReader` snapshot and depend on `state/*` for reads only (see §2). `GET /state` returning strings-not-numbers is the machine-checkable contract; the terminal box is the human view.
+
+### Why there is no browser dashboard (D-10 T4)
+
+A browser-based single-file web view was in the original Step 11 scope and was **explicitly scoped out** under `DECISIONS.md` D-10 tier **T4** for the hackathon timeline. The rationale: the terminal renderer and `GET /state` already surface every value a web UI would show — live P&L, drawdown against the limit, velocity count, kill-switch and `haltReason`, config version — and `npm run audit:show` reconstructs the full trade-by-trade curve from the JSONL after the fact. A hosted page would add a build target, a static-hosting surface, and a second rendering path to keep in sync with `StateSnapshot`, for **no additional evidence**. The terminal view and `/state` endpoint prove every claim the demo makes; that is the whole frontend.
+
+(The `index.html` marketing landing page that briefly lived at the repo root is **not** part of this layer and has been removed — it was a standalone page, not a system surface.)
+
+### Consistency with DEMO.md
+
+`DEMO.md` agrees: pre-flight item 0.6 states *"No browser tab — the dashboard is terminal-only and `GET /state` is JSON (D-10 T4)"*; the beats show the `┌─ SessionGuard ─┐` terminal box and `curl 127.0.0.1:8789/state`, and every use of the word "dashboard" in `DEMO.md` refers to the terminal renderer. There is no browser-dashboard reference anywhere in `DEMO.md`.
