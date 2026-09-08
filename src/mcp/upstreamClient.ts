@@ -1,7 +1,8 @@
 /**
  * MCP client SessionGuard uses to reach the Binance Agent OS MCP server
  * (or MockUpstream). Attaches the bearer token (D-4); classifies 401/403 as
- * AuthError so the fail-closed path (Step 7a) can consume it.
+ * AuthError so the fail-closed path (Step 7a) can consume it. Optional
+ * single-shot refresh; default is hard fail-closed on any 401/403.
  */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -31,6 +32,13 @@ export interface UpstreamClientConfig {
   url: string;
   bearerToken?: string | undefined;
   nodeEnv?: string | undefined;
+  /**
+   * Optional single-shot refresh (D-4). Token refresh semantics are NOT
+   * documented by Binance, so the default is: no refresh, any 401/403 is a
+   * hard fail-closed and the operator must re-authenticate. If provided, it is
+   * attempted at most once per failing call; still failing -> AuthError.
+   */
+  refresh?: (() => Promise<string | null>) | undefined;
 }
 
 function assertTransportAllowed(cfg: UpstreamClientConfig): void {
@@ -44,50 +52,93 @@ function assertTransportAllowed(cfg: UpstreamClientConfig): void {
   );
 }
 
-function classify(e: unknown): never {
+function isAuth(e: unknown): boolean {
   const m = errMsg(e);
-  if (/\b(401|403)\b/.test(m) || /unauthor/i.test(m) || /forbidden/i.test(m)) {
-    throw new AuthError(`upstream auth rejected: ${m}`);
-  }
-  throw e instanceof Error ? e : new Error(m);
+  return /\b(401|403)\b/.test(m) || /unauthor/i.test(m) || /forbidden/i.test(m);
 }
 
 export function createUpstreamClient(cfg: UpstreamClientConfig): UpstreamClient {
   assertTransportAllowed(cfg);
 
-  const client = new Client({ name: "sessionguard", version: "0.1.0" }, { capabilities: {} });
-  const transport = new StreamableHTTPClientTransport(new URL(cfg.url), {
-    requestInit: cfg.bearerToken
-      ? { headers: { Authorization: `Bearer ${cfg.bearerToken}` } }
-      : undefined,
-  });
+  let token = cfg.bearerToken;
+  let client = build();
+  let refreshed = false;
+
+  function build(): Client {
+    const c = new Client({ name: "sessionguard", version: "0.1.0" }, { capabilities: {} });
+    const transport = new StreamableHTTPClientTransport(new URL(cfg.url), {
+      requestInit: token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+    });
+    (c as unknown as { __transport: StreamableHTTPClientTransport }).__transport = transport;
+    return c;
+  }
+
+  function transportOf(c: Client): StreamableHTTPClientTransport {
+    return (c as unknown as { __transport: StreamableHTTPClientTransport }).__transport;
+  }
+
+  async function connectFresh(): Promise<void> {
+    client = build();
+    await client.connect(transportOf(client));
+  }
+
+  /** Run `op`; on a 401/403, try one refresh + reconnect + retry (D-4), else AuthError. */
+  async function guarded<T>(op: () => Promise<T>): Promise<T> {
+    try {
+      return await op();
+    } catch (e) {
+      if (!isAuth(e)) throw e instanceof Error ? e : new Error(errMsg(e));
+      if (cfg.refresh && !refreshed) {
+        refreshed = true;
+        const next = await cfg.refresh().catch(() => null);
+        if (next) {
+          token = next;
+          await connectFresh();
+          try {
+            return await op();
+          } catch (e2) {
+            throw new AuthError(`upstream auth rejected after refresh: ${errMsg(e2)}`);
+          }
+        }
+      }
+      throw new AuthError(`upstream auth rejected: ${errMsg(e)}`);
+    }
+  }
 
   return {
     async connect() {
       try {
-        await client.connect(transport);
+        await client.connect(transportOf(client));
       } catch (e) {
-        classify(e);
+        if (!isAuth(e)) throw e instanceof Error ? e : new Error(errMsg(e));
+        if (cfg.refresh && !refreshed) {
+          refreshed = true;
+          const next = await cfg.refresh().catch(() => null);
+          if (next) {
+            token = next;
+            try {
+              await connectFresh();
+              return;
+            } catch (e2) {
+              throw new AuthError(`upstream auth rejected after refresh: ${errMsg(e2)}`);
+            }
+          }
+        }
+        throw new AuthError(`upstream auth rejected: ${errMsg(e)}`);
       }
     },
     async listTools() {
-      try {
+      return guarded(async () => {
         const res = await client.listTools();
         return res.tools.map((t) => ({
           name: t.name,
           description: t.description,
           inputSchema: t.inputSchema ?? { type: "object" },
         }));
-      } catch (e) {
-        classify(e);
-      }
+      });
     },
     async callTool(name, args) {
-      try {
-        return await client.callTool({ name, arguments: args });
-      } catch (e) {
-        classify(e);
-      }
+      return guarded(() => client.callTool({ name, arguments: args }));
     },
     async close() {
       await client.close().catch(() => undefined);

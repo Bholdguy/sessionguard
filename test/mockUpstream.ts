@@ -58,7 +58,11 @@ function textResult(payload: unknown) {
   return { content: [{ type: "text", text: JSON.stringify(payload) }] };
 }
 
-export async function startMockUpstream(opts: { port?: number; logFile?: string } = {}): Promise<{
+export async function startMockUpstream(opts: {
+  port?: number;
+  logFile?: string;
+  requireBearer?: string;
+} = {}): Promise<{
   url: string;
   port: number;
   calls: MockCall[];
@@ -159,7 +163,11 @@ export async function startMockUpstream(opts: { port?: number; logFile?: string 
     }
   });
 
-  const mounted = await mountMcpServer({ server, port: opts.port ?? 0 });
+  const mounted = await mountMcpServer({
+    server,
+    port: opts.port ?? 0,
+    ...(opts.requireBearer ? { requireBearer: opts.requireBearer } : {}),
+  });
 
   return {
     url: mounted.url,

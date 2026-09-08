@@ -20,11 +20,24 @@ export async function mountMcpServer(opts: {
   port: number;
   host?: string;
   path?: string;
+  /** optional bearer gate — returns 401 unless `Authorization: Bearer <token>` matches (Step 2 test) */
+  requireBearer?: string;
 }): Promise<MountedMcp> {
   const host = opts.host ?? "127.0.0.1";
   const path = opts.path ?? "/mcp";
   const app = express();
   app.use(express.json({ limit: "4mb" }));
+
+  if (opts.requireBearer) {
+    app.use(path, (req, res, next) => {
+      if (req.headers.authorization === `Bearer ${opts.requireBearer}`) return next();
+      res.status(401).json({
+        jsonrpc: "2.0",
+        error: { code: -32001, message: "401 Unauthorized: bad or missing bearer token" },
+        id: null,
+      });
+    });
+  }
 
   const transports = new Map<string, StreamableHTTPServerTransport>();
 
