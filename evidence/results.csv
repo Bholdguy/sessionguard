@@ -1,0 +1,7 @@
+scenario,mode,halted,halt_trade_index,final_drawdown_pct,trades_executed,fee_to_gross_pnl
+drawdown,supervised,true,4,-7.64,4,0.0081
+drawdown,unsupervised,false,,-38.3,7,0.0106
+velocity,supervised,true,5,0,5,inf
+velocity,unsupervised,false,,0,6,inf
+ladder,supervised,true,2,-1.12,2,0.119
+ladder,unsupervised,false,,-35.29,5,0.0378

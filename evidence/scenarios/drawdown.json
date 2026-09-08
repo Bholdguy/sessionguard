@@ -1,0 +1,14 @@
+{
+  "name": "drawdown",
+  "startingEquity": "10000",
+  "expected": { "terminalCode": "DRAWDOWN_BREACH", "halted": true, "haltAtIndex": 4 },
+  "tickets": [
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.1", "mark": "60000", "fillPrice": "60000" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.1", "mark": "59600", "fillPrice": "59600" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.1", "mark": "59200", "fillPrice": "59200" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.1", "mark": "58600", "fillPrice": "58600" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.1", "mark": "57500", "fillPrice": "57500" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.1", "mark": "55000", "fillPrice": "55000" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.1", "mark": "52000", "fillPrice": "52000" }
+  ]
+}

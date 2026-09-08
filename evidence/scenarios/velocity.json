@@ -1,0 +1,13 @@
+{
+  "name": "velocity",
+  "startingEquity": "10000",
+  "expected": { "terminalCode": "VELOCITY_EXCEEDED", "halted": true, "haltAtIndex": 5 },
+  "tickets": [
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.001", "mark": "60000", "fillPrice": "60000" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.001", "mark": "60000", "fillPrice": "60000" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.001", "mark": "60000", "fillPrice": "60000" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.001", "mark": "60000", "fillPrice": "60000" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.001", "mark": "60000", "fillPrice": "60000" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.001", "mark": "60000", "fillPrice": "60000" }
+  ]
+}

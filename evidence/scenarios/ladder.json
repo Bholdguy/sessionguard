@@ -1,0 +1,12 @@
+{
+  "name": "ladder",
+  "startingEquity": "10000",
+  "expected": { "terminalCode": "LADDER_DETECTED", "halted": true, "haltAtIndex": 2 },
+  "tickets": [
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.1", "mark": "60000", "fillPrice": "60000" },
+    { "symbol": "BTCUSDT", "side": "SELL", "type": "MARKET", "quantity": "0.1", "mark": "59000", "fillPrice": "59000" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.3", "mark": "59000", "fillPrice": "59000" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.6", "mark": "57000", "fillPrice": "57000" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "1.2", "mark": "54000", "fillPrice": "54000" }
+  ]
+}

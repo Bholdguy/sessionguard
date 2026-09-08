@@ -28,7 +28,13 @@ export class LedgerStore {
   private _totalCommission = new Decimal(0);
   private _updatedAt = new Date(0).toISOString();
 
-  constructor(public readonly sessionId: string) {}
+  constructor(public sessionId: string) {}
+
+  /** Re-arm (D-8): wipe state and bind to the new session id. */
+  rebind(sessionId: string): void {
+    this.clear();
+    this.sessionId = sessionId;
+  }
 
   /** Apply one fill. Throws (fails closed) on a commission we cannot value in USDT. */
   applyFill(fill: Fill, opts: { commissionUsdtRate?: string } = {}): void {

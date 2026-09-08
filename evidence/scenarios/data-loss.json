@@ -1,0 +1,10 @@
+{
+  "name": "data-loss",
+  "startingEquity": "10000",
+  "expected": { "terminalCode": "DATA_UNAVAILABLE", "halted": true, "haltAtIndex": 2 },
+  "tickets": [
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.05", "mark": "60000", "fillPrice": "60000" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.05", "mark": "60000", "fillPrice": "60000" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.05", "mark": "60000", "fillPrice": "60000", "failRead": { "kind": "price", "mode": "stale" } }
+  ]
+}

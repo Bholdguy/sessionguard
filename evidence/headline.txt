@@ -1,0 +1,1 @@
+Across 3 scripted losing sessions, SessionGuard halted before further loss in every case (drawdown, velocity, ladder); the unsupervised agent never halted and kept trading through all 3, executing 7 more trades and ending on average 18.3x deeper in drawdown where drawdown applied.

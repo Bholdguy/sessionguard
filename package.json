@@ -27,6 +27,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
     "decimal.js": "^10.4.3",
+    "dotenv": "^17.4.2",
     "express": "^4.21.2",
     "zod": "^3.24.1"
   },

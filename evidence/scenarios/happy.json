@@ -1,0 +1,10 @@
+{
+  "name": "happy",
+  "startingEquity": "10000",
+  "expected": { "terminalCode": null, "halted": false },
+  "tickets": [
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.05", "mark": "60000", "fillPrice": "60000" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.05", "mark": "60100", "fillPrice": "60100" },
+    { "symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.05", "mark": "60250", "fillPrice": "60250" }
+  ]
+}
