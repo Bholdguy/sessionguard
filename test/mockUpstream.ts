@@ -7,6 +7,7 @@
  * futures tool that MUST be excluded from the resolved catalog (SECURITY §5).
  */
 import { appendFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,
@@ -191,9 +192,10 @@ export async function startMockUpstream(opts: {
 }
 
 // Standalone: `npm run mock`
-if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, "/")}`) {
+if (!!process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const port = Number(process.env["MOCK_UPSTREAM_PORT"] ?? 8790);
-  startMockUpstream({ port, logFile: process.env["MOCK_LOG_FILE"] }).then((m) => {
+  const logFile = process.env["MOCK_LOG_FILE"];
+  startMockUpstream({ port, ...(logFile ? { logFile } : {}) }).then((m) => {
     console.log(`MockUpstream listening on ${m.url}`);
   });
 }
