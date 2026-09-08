@@ -94,6 +94,8 @@ export async function mountMcpServer(opts: {
       new Promise<void>((resolve) => {
         for (const t of transports.values()) void t.close();
         httpServer.close(() => resolve());
+        // drop keep-alive / SSE sockets so close() doesn't wait for their idle timeout
+        httpServer.closeAllConnections?.();
       }),
   };
 }

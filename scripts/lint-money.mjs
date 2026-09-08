@@ -10,6 +10,8 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "src");
 const MONEY = /\b(price|markPrice|avgEntryPrice|quantity|qty|netQuantity|equity|startingEquity|pnl|realized|unrealized|drawdown|commission|quoteQuantity|quoteOrderQty)\w*\s*[-+*/]\s*(?!=)/i;
 const DECIMAL_OK = /new Decimal|\.plus\(|\.minus\(|\.times\(|\.div\(|\.mul\(|\.cmp\(|\.lte\(|\.gte\(|\.lt\(|\.gt\(|parse\(|format\(/;
+// identifiers that contain a money word but are config ints / names, not money
+const NOT_MONEY = /priceStalenessSeconds|priceSanityMaxDeviationPct|priceTool|priceBySymbol|drawdownPctLimit|commissionUsdtRate|commissionAsset|qtyStr|realizedClose|realizedDelta\b/;
 
 let hits = [];
 
@@ -32,7 +34,7 @@ function walk(dir) {
       code = code
         .replace(/\/(?![*/])(?:\\.|[^/\n])+\/[gimsuy]*/g, " RE ")
         .replace(/"(?:\\.|[^"\n])*"|'(?:\\.|[^'\n])*'|`(?:\\.|[^`\n])*`/g, " STR ");
-      if (MONEY.test(code) && !DECIMAL_OK.test(code)) {
+      if (MONEY.test(code) && !DECIMAL_OK.test(code) && !NOT_MONEY.test(code)) {
         hits.push(`${p}:${i + 1}: ${trimmed}`);
       }
     });

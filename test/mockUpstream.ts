@@ -30,6 +30,8 @@ export interface MockScript {
   placeOrderQueue: Array<{ fillPrice?: string; status?: string; error?: string }>;
   /** force the next read of this logical kind to fail / be stale */
   failNextRead?: { kind: "price" | "account"; mode: "error" | "stale" };
+  /** override the klines close per symbol (to test the price sanity clamp) */
+  klinesCloseBySymbol?: Record<string, string>;
 }
 
 const DEFAULT_SCRIPT: MockScript = {
@@ -103,7 +105,7 @@ export async function startMockUpstream(opts: {
       }
       case "spot_get_klines": {
         const sym = String(args["symbol"] ?? "");
-        const close = script.priceBySymbol[sym] ?? "0";
+        const close = script.klinesCloseBySymbol?.[sym] ?? script.priceBySymbol[sym] ?? "0";
         return textResult([[Date.now() - 60_000, close, close, close, close, "1.0", Date.now()]]);
       }
       case "spot_account_info": {
