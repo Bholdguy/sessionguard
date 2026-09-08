@@ -31,13 +31,14 @@ describe("Step 1 — MCP proxy skeleton", () => {
     (globalThis as Record<string, unknown>).__catalog = catalog;
     (globalThis as Record<string, unknown>).__logs = logs;
 
-    const server = createInboundServer({
-      catalog,
-      onToolCall: async ({ upstreamToolName, args }) => ({
-        result: await forward(upstream, upstreamToolName, args),
-      }),
-    });
-    inbound = await mountMcpServer({ server, port: 0 });
+    const makeServer = () =>
+      createInboundServer({
+        catalog,
+        onToolCall: async ({ upstreamToolName, args }) => ({
+          result: await forward(upstream, upstreamToolName, args),
+        }),
+      });
+    inbound = await mountMcpServer({ createServer: makeServer, port: 0 });
 
     agent = new Client({ name: "test-agent", version: "0.0.1" }, { capabilities: {} });
     await agent.connect(new StreamableHTTPClientTransport(new URL(inbound.url)));
@@ -160,5 +161,56 @@ describe("Step 1 — boot fails closed (INV-12 / D-1)", () => {
     }).catch(() => undefined);
     expect(exitCode).toBe(1);
     expect(logs.some((l) => l.includes("timed out after 50ms"))).toBe(true);
+  });
+});
+
+describe("Step 1 — inbound server accepts multiple sequential sessions (regression)", () => {
+  let mock: Awaited<ReturnType<typeof startMockUpstream>>;
+  let inbound: Awaited<ReturnType<typeof mountMcpServer>>;
+
+  beforeAll(async () => {
+    mock = await startMockUpstream();
+    const upstream = createUpstreamClient({ url: mock.url, nodeEnv: "test" });
+    await upstream.connect();
+    const catalog = await resolveOrExit(upstream, {
+      timeoutMs: 5000,
+      upstreamLabel: mock.url,
+      exit: ((c: number) => {
+        throw new Error(`unexpected exit(${c})`);
+      }) as (c: number) => never,
+      log: () => undefined,
+    });
+    inbound = await mountMcpServer({
+      createServer: () =>
+        createInboundServer({
+          catalog,
+          onToolCall: async ({ upstreamToolName, args }) => ({
+            result: await forward(upstream, upstreamToolName, args),
+          }),
+        }),
+      port: 0,
+    });
+  });
+
+  afterAll(async () => {
+    await inbound?.close();
+    await mock?.close();
+  });
+
+  it("a second client can initialize after the first — no 'Already connected to a transport' crash", async () => {
+    const connectOnce = async (name: string) => {
+      const client = new Client({ name, version: "0.0.1" }, { capabilities: {} });
+      await client.connect(new StreamableHTTPClientTransport(new URL(inbound.url)));
+      const tools = (await client.listTools()).tools.map((t) => t.name);
+      await client.close().catch(() => undefined);
+      return tools;
+    };
+
+    const first = await connectOnce("agent-1");
+    expect(first).toContain("spot_new_order");
+
+    // before the fix this rejected with "Already connected to a transport"
+    const second = await connectOnce("agent-2");
+    expect(second).toContain("spot_new_order");
   });
 });

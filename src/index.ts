@@ -41,7 +41,7 @@ async function main(): Promise<void> {
   });
 
   const inbound = await mountMcpServer({
-    server: app.inboundServer,
+    createServer: app.makeInboundServer,
     host: env["SESSIONGUARD_INBOUND_HOST"] ?? "127.0.0.1",
     port: Number(env["SESSIONGUARD_INBOUND_PORT"] ?? 8788),
   });

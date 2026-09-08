@@ -78,6 +78,9 @@ export async function startMockUpstream(opts: {
   let script: MockScript = structuredClone(DEFAULT_SCRIPT);
   let orderSeq = 1000;
 
+  // A fresh MCP Server per Streamable-HTTP session (httpServer.ts); the mock's
+  // scripted state (calls / script / orderSeq) is shared across sessions via closure.
+  const createServer = (): Server => {
   const server = new Server({ name: "mock-binance-agentos", version: "0.0.1" }, { capabilities: { tools: {} } });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS as never }));
@@ -166,8 +169,11 @@ export async function startMockUpstream(opts: {
     }
   });
 
+    return server;
+  };
+
   const mounted = await mountMcpServer({
-    server,
+    createServer,
     port: opts.port ?? 0,
     ...(opts.requireBearer ? { requireBearer: opts.requireBearer } : {}),
   });

@@ -38,7 +38,8 @@ export interface App {
   audit: AuditLog;
   marketReader: MarketReader;
   accountReader: AccountReader;
-  inboundServer: ReturnType<typeof createInboundServer>;
+  /** builds a fresh inbound MCP Server — one per Streamable-HTTP session (httpServer.ts) */
+  makeInboundServer: () => ReturnType<typeof createInboundServer>;
   onToolCall: ReturnType<typeof createToolCallHandler>;
   snapshot: () => Promise<StateSnapshot>;
   close: () => Promise<void>;
@@ -90,8 +91,6 @@ export async function createApp(opts: AppOptions): Promise<App> {
     ...(opts.now ? { now: opts.now } : {}),
   });
 
-  const inboundServer = createInboundServer({ catalog, onToolCall });
-
   log(`session ${session.sessionId} ACTIVE  starting equity ${startingEquity} USDT`);
 
   return {
@@ -102,7 +101,7 @@ export async function createApp(opts: AppOptions): Promise<App> {
     audit,
     marketReader,
     accountReader,
-    inboundServer,
+    makeInboundServer: () => createInboundServer({ catalog, onToolCall }),
     onToolCall,
     snapshot: () =>
       liveSnapshot({ sessionStore, ledger, marketReader, ...(opts.now ? { now: opts.now } : {}) }),

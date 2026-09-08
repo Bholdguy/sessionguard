@@ -5,8 +5,13 @@ import { readAuditRows, reconstruct } from "./auditLog.js";
 
 const args = process.argv.slice(2);
 const dir = process.env["SESSIONGUARD_EVIDENCE_DIR"] ?? "./evidence";
-let path = args[args.indexOf("--path") + 1];
-const session = args[args.indexOf("--session") + 1];
+/** value that follows `--flag`, or undefined if the flag is absent (indexOf -1 must not read args[0]) */
+const flag = (name: string): string | undefined => {
+  const i = args.indexOf(name);
+  return i >= 0 ? args[i + 1] : undefined;
+};
+let path = flag("--path");
+const session = flag("--session");
 if (!path && session) path = join(dir, `audit-${session}.jsonl`);
 if (!path) {
   const files = readdirSync(dir).filter((f) => /^audit-.*\.jsonl$/.test(f));

@@ -1,6 +1,12 @@
 /**
  * Mount an MCP low-level Server on an Express app over stateful Streamable HTTP.
  * Shared by the SessionGuard inbound proxy server and by test/mockUpstream.
+ *
+ * A fresh MCP `Server` instance is built per Streamable-HTTP session (via
+ * `opts.createServer`). The MCP SDK forbids connecting one `Server`/`Protocol`
+ * to more than one transport, so reusing a single instance across connections
+ * throws "Already connected to a transport" on the second client's initialize
+ * and crashes the process.
  */
 import express from "express";
 import { randomUUID } from "node:crypto";
@@ -16,7 +22,8 @@ export interface MountedMcp {
 }
 
 export async function mountMcpServer(opts: {
-  server: Server;
+  /** builds a NEW MCP Server per Streamable-HTTP session (see file header) */
+  createServer: () => Server;
   port: number;
   host?: string;
   path?: string;
@@ -60,10 +67,16 @@ export async function mountMcpServer(opts: {
           transports.set(id, t);
         },
       });
+      const mcpServer = opts.createServer();
+      await mcpServer.connect(t);
+      // chain after the SDK's own onclose (set by connect) so the session is
+      // evicted and its Server torn down when the client disconnects
+      const sdkOnClose = t.onclose;
       t.onclose = () => {
+        sdkOnClose?.();
         if (t.sessionId) transports.delete(t.sessionId);
+        void mcpServer.close();
       };
-      await opts.server.connect(t);
       transport = t;
     }
     await transport.handleRequest(req, res, req.body);

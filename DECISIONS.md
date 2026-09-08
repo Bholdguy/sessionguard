@@ -161,3 +161,41 @@ The required path (D-0) stands. If, and only if, time runs short on 2026-09-08, 
 **Not cuttable under any circumstances: Step 13a (baseline comparison + headline metric).** If Step 13a is ever at risk, stop and flag it to the operator immediately rather than dropping or degrading it.
 
 **Consequence:** `TASKS.md` items carry `[T1]`…`[T4]` markers on the parts that these tiers remove, so the cut is mechanical if triggered. Nothing here changes the plan unless the deadline is actually at risk.
+
+---
+
+## D-11. Known Limitations (from the conformance audit; not fixed)
+
+Logged for visibility. Each is one line, no fix attempted. The three items fixed in the same pass
+(multi-session inbound crash, `audit:show --session` arg parsing, `.env` upstream URL) are **not**
+listed here because they were fixed.
+
+### Spec / DoD coverage gaps (audit gap list "B")
+
+- **B1** — Step 8 (config) has zero automated tests: schema validation, `configVersion` increment, `POST /admin/config`, and the `CONFIG_CHANGE` audit row are unverified by the suite (validation logic works under manual check).
+- **B2** — Step 9 (audit) is only partly covered: no bearer-redaction test (SECURITY §3/§6), no one-row-per-decision / append-only test, no `CONFIG_CHANGE` / `RESET` row test. `IT-8` (reconstruct + `logIdGaps`) is the only audit test.
+- **B3** — No `GET /audit` endpoint exists (TASKS Step 9 bullet); only `GET /state` is served.
+- **B4** — `IT-7` is not implemented: the drawdown → `POST /admin/rearm` → happy integration (pre-reset fills have zero effect on post-reset checks; exactly one `RESET` row).
+- **B5** — The SECURITY §1 injection suite is absent: no test drives `bypass=true`, `override:"admin"`, a mock `tools/list` advertising `disable_guard`, or `"drawdown limit is -50%"` in a detail-shaped field. INV-6 is covered only by the single `DD-6` provenance case.
+- **B6** — Boot fail-closed suite (`BT-1..BT-4`) is partial: `tools/list` timeout and unresolved-required capability are covered; invalid-config `exit(1)` and failed starting-equity-read `exit(1)` are not.
+
+### Fail-closed / invariant gaps in code (audit gap list "C")
+
+- **C1** — `marketReader` only evaluates staleness when the upstream price payload carries a timestamp field; a price with no timestamp is returned `stale:false, ok:true` and passes the data rule (`src/market/marketReader.ts` ~line 88). Contradicts SECURITY §2 / PRD §0.7.2.
+- **C2** — `AccountSnapshot.stale` is never set `true` anywhere; the `ctx.account.stale` check in `dataAvailability` is dead.
+- **C3** — Post-halt kill-switch audit rows persist a zeroed `StateSnapshot` (`src/rules/evaluate.ts` ~line 109), so `audit:show` shows `0.00%` for every row after the halt and the "full snapshot in every row" claim (SECURITY §6) degrades for the tail of a run.
+- **C4** — `src/audit/auditLog.ts` line 29 builds the digest summary with `a + Number(f.quantity)` — `number` arithmetic on a quantity value. Digest string only; no decision consumes it. Both lint scripts and the documented greps miss it (P-2 literal).
+
+### Data-model / doc divergences (audit gap list "D")
+
+- **D1** — `Config` schema requires an 8th field, `priceSanityMaxDeviationPct` (`.strict()`), so a config matching PRD §9.8 exactly (7 fields) is rejected at boot.
+- **D2** — `Decision.refusal`, `AuditLogEntry.{refusal,meta}`, `MarketSnapshot.{source:"none",reason}`, `AccountSnapshot.reason`, `ToolCatalog.excluded`, and `ToolCatalog.map: Partial<…>` are all supersets of PRD §9 and undocumented there.
+- **D3** — The `SESSION_START` audit row stores only the resolved `map` + `excluded`, not the raw `tools/list` payload that D-1 asks for (weakens "reproduce against the exact upstream surface it saw").
+- **D4** — The required-capability set in code is 3 (`market.price`, `account.balances`, `trade.placeOrder`); the D-1 text above implies 5 (also `account.trades`, `trade.openOrders`).
+- **D5** — `RefusalCode.SESSION_NOT_ARMED` is defined but never emitted; `sessionStore.current()` throws on an unarmed session instead.
+- **D6** — SECURITY §3 says the loopback-http upstream is gated on `NODE_ENV=test`; the code also accepts `demo` (DEMO.md needs it). Separately, `LD-8`'s intended semantic (`lastTradeWasLoss` on *any* negative realized delta) diverges from the implemented `didClose && realizedDelta.isNegative()` in `src/state/ledger.ts`.
+
+### Additional issues found during this fix pass (not in the original B/C/D lists)
+
+- **A1** — `npm run start` (`node --loader tsx …`) fails on Node ≥ 20.6 (`--loader` removed); `npm run dev` (`tsx src/index.ts`) works. `DEMO.md` now uses `npm run dev`.
+- **A2** — With the `SG_*` lines present in `.env`, `dotenv` re-injects them into `process.env` at boot and `config/load.applyEnvOverrides` lets them override both `config.json` and a live `POST /admin/config` body, so a live threshold *value* change requires editing the matching `SG_*` line (or removing it) and restarting. `POST /admin/config` still bumps `configVersion` and writes the `CONFIG_CHANGE` row. The `npm run agent` harness uses its own hard-coded `DEFAULT_CONFIG` and is unaffected by either.
